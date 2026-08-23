@@ -20,21 +20,33 @@ jobs:
           username: ${{ secrets.LIGHTSAIL_USERNAME }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
-            source ~/.bashrc || true
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            [ -f /opt/bitnami/scripts/setenv.sh ] && source /opt/bitnami/scripts/setenv.sh
-            
-            # Force add all common node paths to PATH
-            export PATH=$PATH:/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:~/.npm-global/bin
-            # If NVM is used, try to add its bin path explicitly
-            if [ -d ~/.nvm/versions/node ]; then
-              export PATH=$PATH:~/.nvm/versions/node/$(ls ~/.nvm/versions/node | tail -1)/bin
+            # 1. Install NVM if it doesn't exist
+            if [ ! -d "$HOME/.nvm" ]; then
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
             fi
             
-            cd /home/bitnami/dd_chat
+            # Load NVM
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
+            # 2. Install Node 20 if npm is missing
+            if ! command -v npm &> /dev/null; then
+              nvm install 20
+              nvm use 20
+              nvm alias default 20
+            fi
+            
+            # 3. Install PM2 globally if missing
+            if ! command -v pm2 &> /dev/null; then
+              npm install -g pm2
+            fi
+            
+            # 4. Deploy the app
+            cd /home/bitnami/dd_chat
             git pull origin main
             npm install
             npm run build
-            pm2 restart ddchat
+            
+            # 5. Restart or Start PM2
+            pm2 restart ddchat || pm2 start npm --name "ddchat" -- run start
+            pm2 save
