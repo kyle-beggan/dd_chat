@@ -20,8 +20,16 @@ jobs:
           username: ${{ secrets.LIGHTSAIL_USERNAME }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
+            source ~/.bashrc || true
+            source ~/.profile || true
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # Load nvm if present
+            
+            # If this is a Bitnami stack, load its environment
+            [ -f /opt/bitnami/scripts/setenv.sh ] && source /opt/bitnami/scripts/setenv.sh
+            
+            # Ensure common node paths are in PATH
+            export PATH=$PATH:/opt/bitnami/node/bin:/usr/local/bin:$HOME/.npm-global/bin
             
             cd /home/bitnami/dd_chat
             
