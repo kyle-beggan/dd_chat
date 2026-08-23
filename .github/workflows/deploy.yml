@@ -6,47 +6,61 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # Supabase requires Node 22+
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Next.js App
+        run: npm run build
+
+      - name: Copy files to Lightsail via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USERNAME }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          source: ".next,public,package.json,package-lock.json,next.config.ts"
+          target: "/home/bitnami/dd_chat"
+          rm: true # Clean the target directory before copying to avoid stale files
+
+      - name: Restart PM2 on Lightsail
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USERNAME }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
-            # 1. Install NVM if it doesn't exist
-            if [ ! -d "$HOME/.nvm" ]; then
-              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-            fi
-            
-            # Load NVM
+            # 1. Load NVM and ensure Node 22 is installed/used
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
-            # 2. Install Node 20 if npm is missing
-            if ! command -v npm &> /dev/null; then
-              nvm install 20
-              nvm use 20
-              nvm alias default 20
+            if ! command -v npm &> /dev/null || [[ $(node -v) != v22* ]]; then
+              nvm install 22
+              nvm use 22
+              nvm alias default 22
             fi
             
-            # 3. Install PM2 globally if missing
             if ! command -v pm2 &> /dev/null; then
               npm install -g pm2
             fi
             
-            # 4. Deploy the app
             cd /home/bitnami/dd_chat
-            git pull origin main
-            npm install
-            npm run build
             
-            # 5. Restart or Start PM2
+            # Install only production dependencies
+            npm ci --omit=dev
+            
+            # Restart or Start PM2
             pm2 restart ddchat || pm2 start npm --name "ddchat" -- run start
             pm2 save
