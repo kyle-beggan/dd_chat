@@ -24,6 +24,9 @@ jobs:
 
       - name: Build Next.js App
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://nmobyroblodtycyjwmfd.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_cCtMmN3C38pQs2ttuMxR5A_pv9XU4hy
 
       - name: Copy files to Lightsail via SCP
         uses: appleboy/scp-action@v0.1.7
