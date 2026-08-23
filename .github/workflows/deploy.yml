@@ -64,6 +64,6 @@ jobs:
             # Install only production dependencies
             npm install --omit=dev
             
-            # Restart or Start PM2
-            pm2 restart ddchat || pm2 start npm --name "ddchat" -- run start
+            # 5. Restart or Start PM2 on port 3001 to avoid colliding with other apps
+            pm2 restart ddchat || pm2 start npm --name "ddchat" -- run start -- -p 3001
             pm2 save
