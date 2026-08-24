@@ -247,12 +247,22 @@ export default function ChatPage() {
       <footer className="bg-zinc-900 border-t border-zinc-800 p-4 sticky bottom-0">
         <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSendMessage} className="flex space-x-3">
-            <input
-              type="text"
+            <textarea
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={(e) => {
+                setNewMessage(e.target.value)
+                e.target.style.height = 'auto'
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  if (newMessage.trim()) handleSendMessage(e as unknown as React.FormEvent)
+                }
+              }}
               placeholder="Type a message..."
-              className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-5 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner"
+              rows={1}
+              className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-5 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner resize-none min-h-[50px]"
             />
             <button
               type="submit"
